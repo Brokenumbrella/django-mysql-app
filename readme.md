@@ -2,10 +2,11 @@
 
 ## 概要
 
-最初に、勉強用として作成しており本番環境等で使えるようにはなっていません。<br />
-その辺りご配慮いただければ幸いです。（出来たらセキュリティ周りを教えてほしい）<br />
+最初に、こちらは勉強用として作成しており本番環境等で使えるようにはなっていません。<br />
+その辺りご配慮いただければ幸いです。<br />
 <br />
-さて、ここでは Django 環境を構築します。<br />
+では Django 開発環境を構築します。<br />
+Django はテスト用に簡易サーバーを持っていますが、本番にも使える nginx を使って構築したいと思います。<br />
 DataBase には MySQL8.0 を使います。<br />
 <br />
 また、docker内で現在のユーザーを追加するため linux の id コマンドを使っています。<br />
@@ -42,9 +43,11 @@ DUID=$(id -u) DGID=$(id -g) MYSQL_PW docker-compose $1 $2 $3 $4 $5 $6 $7 $8 $9
 
 - Alpine 3.1.0<br />
 - Python 3.7.4<br />
-- Django 2.2.7<br />
-- uwsgi  2.0.18<br />
-- mysqlclient 1.4.4<br />
+- Django 2.2.7 or later<br />
+- uwsgi  2.0.18 or later<br />
+- mysqlclient 1.4.4 or later<br />
+
+&emsp;&emsp; Python と Alpine は Python の公式リポジトリにあれば Dockerfile を編集して別のバージョンを使う事が出来ます。<br />
 
 ### フォルダ構成<br/>
 - フォルダ及びファイルの構成
@@ -83,9 +86,11 @@ DUID=$(id -u) DGID=$(id -g) MYSQL_PW docker-compose $1 $2 $3 $4 $5 $6 $7 $8 $9
 
 ## 手順
 
-1. git clone します。<br />
-  最初に `db/__init__.txt` ファイルを削除して下さい。<br />
+1. git clone します<br />
+  **注意**<br />
+  clone 出来たらまず `db/__init__.txt` ファイルを削除して下さい。<br />
   これがあると MySQL の初期化で失敗しエラーが出ます。
+  次に、docom.sh を編集して MYSQL_PW=mysql_root_password のようにパスワード文字列を入れて下さい。<br />
 
 2. docker image を作成するためビルドします<br />
   下記コマンドを docker-compose.yml ファイルのあるフォルダで実行して docker Image を作成します<br />
@@ -93,7 +98,7 @@ DUID=$(id -u) DGID=$(id -g) MYSQL_PW docker-compose $1 $2 $3 $4 $5 $6 $7 $8 $9
   もしくは<br />
   `$ DUID=$(id -u) DGID=$(id -g) MYSQL_PW=mysql_root_password docker-compose build web` <br />
 
-3. Django project を作成する<br />
+3. Django project を作成します<br />
     - django-admin startproject で新規作成する場合<br />
       **初めに!!**<br />
       DB の　テーブル名を決めて下さい。
@@ -128,23 +133,23 @@ DUID=$(id -u) DGID=$(id -g) MYSQL_PW docker-compose $1 $2 $3 $4 $5 $6 $7 $8 $9
             - models.py
             - views.py
       ```
-4. ./web/uwsgi.ini ファイルを `./src/<project name>/<project name>/` へコピーします。  
+4. ./web/uwsgi.ini ファイルを `./src/<project name>/<project name>/` へコピーします  
   **(ここは新規プロジェクトを作成した場合のみ)**<br />
   これはローカル環境で行います<br />
-  docker環境下では `/code/<project name>/<project name>/uwsgi.ini` に配置されます。
+  docker環境下では `/code/<project name>/<project name>/uwsgi.ini` に配置する事になります。
 
-5. 手順4. でコピーした `./src/<project name>/<project name>/uwsgi.ini` ファイルを修正します。  
+5. 手順4. でコピーした `./src/<project name>/<project name>/uwsgi.ini` ファイルを修正します  
   **(ここは新規プロジェクトを作成した場合のみ)**<br />
   prjname=mysite となっている部分を 2. で作成もしくはコピーしたプロジェクト名に変更します。<br />
   その他に変更すべき箇所があればそこも適宜おこないます。<br />
 
-6. docker-compose.yml を修正します。<br />
+6. docker-compose.yml を修正します<br />
   uwsgi のパラメータにある /mysite/ 部分を 2. で作成もしくはコピーしたプロジェクト名に変更します。<br />
     ```
     修正前  command: uwsgi --ini /code/mysite/mysite/uwsgi.ini
     修正後  command: uwsgi --ini /code/<project name>/<project name>/uwsgi.ini
     ```
-7. `./nginx/conf/nginx_my.conf` を修正します。（必要があれば）<br />
+7. `./nginx/conf/nginx_my.conf` を修正します（必要があれば）<br />
   localhost 以外のサーバーで動かす場合はこのファイルの server_name の設定を変更します<br />
   また、nginx の設定が変更な場合はここで行えます<br />
   ファイル名は適当に変更する事も別途このフォルダに設定ファイル(*.conf)を追加する事も出来ます<br />
@@ -200,7 +205,7 @@ DUID=$(id -u) DGID=$(id -g) MYSQL_PW docker-compose $1 $2 $3 $4 $5 $6 $7 $8 $9
       ```
       &emsp; (mysite には手順 3. で作ったプロジェクト名を入れて下さい) <br />
 
-    これでアプリケーションの作成が完了しました。<br />
+    これでアプリケーションが作成されました。<br />
 
 12. アプリケーションへアクセスできるように様にビューとurlsを指定します。<br />
     ここからは Django のチュートリアル Polls と同様の作業となります。<br />
@@ -242,28 +247,12 @@ DUID=$(id -u) DGID=$(id -g) MYSQL_PW docker-compose $1 $2 $3 $4 $5 $6 $7 $8 $9
             path('admin/', admin.site.urls),
         ]
         ```
-  13. ./docom.sh up -d でサーバーを起動し、http://localhost:8080/myapp へアクセスして動作確認を行います。<br />
+  13. アプリの動作確認をします<br />
+    ./docom.sh up -d でサーバーを起動し、http://localhost:8080/myapp へアクセスします。<br />
     URL には /myapp を付けて下さい。locaphost:8080 だけだと Page not found(404)エラーが出ます。<br />
     ブラウザ画面に「Hello, world. You're at the myapp index.」と表示されれば成功です。<br />
 
-  14. 次に管理画面を使えるように MySQL DB に migrate で必要なテーブル等を書き込みます。<br />
-    今回も２つの方法がありますが、ローカル環境からやってみます。<br />
-    **・方法１：docker-compose run web で migrate する場合**<br />
-      `$ ./docom.sh run -w //code/mysite/ web python manage.py migrate`<br />
-      <br />
-    **・方法２：サーバーを起動させて docker exec によりコンテナ内に入って migrate する場合**<br />
-      ```
-      $ ./docom.sh up -d
-      $ docker exec -it django.web /bin/sh
-      /code $ とプロンプトが出ればコンテナ内に入れています。
-      $ cd mysite
-      $ python manage.py migrate
-      $ exit
-      ```
-      （Windows10 の場合は `winpty docker exec -it django.web sh` でコンテナに入ります。）<br />
-
-  15. collectstatic でスタティックファイルを所定のフォルダへ集めます。<br />
-    
+  14. collectstatic でスタティックファイルを所定のフォルダへ集めます。<br />
       はじめに mysite/mysite/settings.py の最後に STATIC_ROOT の設定を追記します。<br />
       これを入れないと collectstatic で下記のエラーが出ます。<br />
 
@@ -275,6 +264,9 @@ DUID=$(id -u) DGID=$(id -g) MYSQL_PW docker-compose $1 $2 $3 $4 $5 $6 $7 $8 $9
 
       **/code/mysite/mysite/settings.py**
       ```python
+      |
+      〜いろいろ〜
+      |
       LANGUAGE_CODE = 'ja'
 
       TIME_ZONE = 'Asia/Tokyo'
@@ -285,7 +277,7 @@ DUID=$(id -u) DGID=$(id -g) MYSQL_PW docker-compose $1 $2 $3 $4 $5 $6 $7 $8 $9
       STATIC_ROOT = STATIC_URL      # これを追加
       ```
 
-      collectstatic を行います。＜br />
+      collectstatic を行います。  
 
       ```
       $ ./docom.sh run -w /code/mysite/ web python manage.py collectstatic
@@ -302,8 +294,24 @@ DUID=$(id -u) DGID=$(id -g) MYSQL_PW docker-compose $1 $2 $3 $4 $5 $6 $7 $8 $9
       （Windows10 の場合は `winpty docker exec -it django.web sh` でコンテナに入ります。）<br />
       エラーが出なければ ./static フォルダに admin フォルダが追加されているはずです。<br />
 
-  16. superuser を作って管理画面にログインできるようにします。<br />
-    今回も２つの方法がありますが、ローカル環境から作ってみます。<br />
+  15. 次に管理画面を使えるように MySQL DB に migrate で必要なテーブル等を書き込みます<br />
+    今回も２つの方法があります。好きな方で作って下さい。<br />
+    **・方法１：docker-compose run web で migrate する場合**<br />
+      `$ ./docom.sh run -w //code/mysite/ web python manage.py migrate`<br />
+      <br />
+    **・方法２：サーバーを起動させて docker exec によりコンテナ内に入って migrate する場合**<br />
+      ```
+      $ ./docom.sh up -d
+      $ docker exec -it django.web /bin/sh
+      /code $ とプロンプトが出ればコンテナ内に入れています。
+      $ cd mysite
+      $ python manage.py migrate
+      $ exit
+      ```
+      （Windows10 の場合は `winpty docker exec -it django.web sh` でコンテナに入ります。）<br />
+
+  16. superuser を作って管理画面にログインできるようにします<br />
+    今回も２つの方法があります。好きな方で作って下さい。<br />
     **・方法１：docker-compose run web で作る場合**<br />
       `$ ./docom.sh run -w //code/mysite/ web python manage.py createsuperuser`<br />
       （ここで名前、メールアドレス、パスワードの入力を求められるので、入力します）<br />
